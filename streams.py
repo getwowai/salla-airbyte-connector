@@ -72,7 +72,7 @@ class BaseSallaStream(HttpStream):
 
     # Date chunking - 1 day chunks to avoid pagination limit
     chunk_days = 1
-    start_date = "2020-01-01"  # Fetch all historical data
+    start_date = "2025-01-01"  # Fetch data from 2025
 
     # Subclasses must define these
     cursor_field: str = None
