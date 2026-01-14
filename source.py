@@ -13,7 +13,20 @@ from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http.requests_native_auth import TokenAuthenticator
 import requests
 
-from streams import CustomersStream, OrdersStream
+from streams import (
+    # Simple streams (Full Refresh)
+    StoreInfoStream,
+    OrderStatusesStream,
+    ProductsStream,
+    # Incremental streams
+    CustomersStream,
+    OrdersStream,
+    # Parent-child streams
+    OrderItemsStream,
+    OrderShipmentsStream,
+    ProductVariantsStream,
+    ProductQuantitiesStream,
+)
 
 logger = logging.getLogger("airbyte")
 
@@ -25,8 +38,15 @@ class SallaSource(AbstractSource):
     A custom Airbyte source connector for syncing data from Salla e-commerce platform.
 
     Streams:
-    - customers: Customer profiles (cursor: updated_at)
-    - orders: Order information (cursor: date)
+    - store_info: Store information (full refresh)
+    - order_statuses: Order status lookup (full refresh)
+    - products: Product catalog (full refresh)
+    - customers: Customer profiles (incremental, cursor: updated_at)
+    - orders: Order information (incremental, cursor: date)
+    - order_items: Order line items (parent-child of orders)
+    - order_shipments: Order shipments (parent-child of orders)
+    - product_variants: Product variants (parent-child of products)
+    - product_quantities: Product quantities (parent-child of products)
 
     Features:
     - OAuth 2.0 and API Key authentication
@@ -85,22 +105,24 @@ class SallaSource(AbstractSource):
         """
         Return list of available streams.
 
-        Streams:
-        - customers: Customer profiles
-        - orders: Order information
+        Streams are ordered: simple first, then incremental, then parent-child.
         """
         token = self._get_token(config)
         authenticator = TokenAuthenticator(token=token)
 
         return [
-            CustomersStream(
-                authenticator=authenticator,
-                config=config,
-            ),
-            OrdersStream(
-                authenticator=authenticator,
-                config=config,
-            ),
+            # Simple streams (Full Refresh)
+            StoreInfoStream(authenticator=authenticator, config=config),
+            OrderStatusesStream(authenticator=authenticator, config=config),
+            ProductsStream(authenticator=authenticator, config=config),
+            # Incremental streams
+            CustomersStream(authenticator=authenticator, config=config),
+            OrdersStream(authenticator=authenticator, config=config),
+            # Parent-child streams
+            OrderItemsStream(authenticator=authenticator, config=config),
+            OrderShipmentsStream(authenticator=authenticator, config=config),
+            ProductVariantsStream(authenticator=authenticator, config=config),
+            ProductQuantitiesStream(authenticator=authenticator, config=config),
         ]
 
     def _get_token(self, config: Mapping[str, Any]) -> str:
