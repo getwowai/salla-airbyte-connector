@@ -4,10 +4,17 @@ A custom Airbyte source connector for syncing data from Salla e-commerce platfor
 
 ## Streams
 
-| Stream | Cursor Field | Description |
-|--------|--------------|-------------|
-| `customers` | `updated_at` | Customer profiles and data |
-| `orders` | `date` | Order information |
+| Stream | Type | Description |
+|--------|------|-------------|
+| `store_info` | Full Refresh | Store information (single record) |
+| `order_statuses` | Full Refresh | Order status lookup table |
+| `products` | Full Refresh | Product catalog |
+| `customers` | Incremental | Customer profiles (cursor: `updated_at`) |
+| `orders` | Incremental | Order information (cursor: `date`) |
+| `order_items` | Parent-Child | Order line items (from orders) |
+| `order_shipments` | Parent-Child | Order shipments (from orders) |
+| `product_variants` | Parent-Child | Product variants (from products) |
+| `product_quantities` | Parent-Child | Product stock levels (from products) |
 
 ## Features
 
@@ -15,6 +22,7 @@ A custom Airbyte source connector for syncing data from Salla e-commerce platfor
 - **Incremental Sync**: Uses cursor fields for efficient syncing
 - **Date Chunking**: 1-day chunks to avoid Salla's 10,000 pagination limit
 - **Robust Retry**: 120-second constant backoff on 429 errors (10 retries)
+- **Parent-Child Streams**: Automatically fetches related data from parent streams
 
 ## Why Python over YAML?
 
@@ -94,11 +102,33 @@ python main.py read --config secrets/config.json --catalog catalog.json --state 
 ### Docker (Self-hosted Airbyte)
 ```bash
 # Build Docker image
-docker build -t source-salla-python:0.1.0 .
+docker build -t source-salla-python:0.2.0 .
 
 # Push to registry (example: GCP Artifact Registry)
-docker tag source-salla-python:0.1.0 europe-west1-docker.pkg.dev/YOUR_PROJECT/airbyte-connector/source-salla-python:0.1.0
-docker push europe-west1-docker.pkg.dev/YOUR_PROJECT/airbyte-connector/source-salla-python:0.1.0
+docker tag source-salla-python:0.2.0 europe-docker.pkg.dev/YOUR_PROJECT/airbyte-connector/source-salla-python:0.2.0
+docker push europe-docker.pkg.dev/YOUR_PROJECT/airbyte-connector/source-salla-python:0.2.0
 
 # Add to Airbyte as custom connector using the image URL
 ```
+
+## Stream Details
+
+### Simple Streams (Full Refresh)
+
+- **store_info**: Basic store information, single record
+- **order_statuses**: Lookup table for order status values
+- **products**: Full product catalog with images, categories, variants
+
+### Incremental Streams
+
+- **customers**: Customer profiles with date-based filtering (`date_from`, `date_to`)
+- **orders**: Order data with date-based filtering (`from_date`, `to_date`)
+
+### Parent-Child Streams
+
+These streams fetch data for each record in their parent stream:
+
+- **order_items**: Line items for each order (`/orders/items?order_id={id}`)
+- **order_shipments**: Shipments for each order (`/orders/{id}/shipments`)
+- **product_variants**: Variants for each product (`/products/{id}/variants`)
+- **product_quantities**: Stock levels for each product (`/products/{id}/quantities`)
