@@ -1,0 +1,56 @@
+# Salla Connector Metadata
+
+metadataSpecVersion: "1.0"
+data:
+  name: Salla
+  definitionId: salla-python
+  connectorType: source
+  dockerRepository: airbyte/source-salla-python
+  dockerImageTag: 0.1.0
+  license: MIT
+  supportLevel: community
+  
+  # Connector capabilities
+  releaseStage: alpha
+  documentationUrl: https://docs.salla.dev/
+  
+  # Supported sync modes
+  supportedDestinationSyncModes:
+    - append
+    - overwrite
+    - append_dedup
+  
+  # Connector features
+  ab_internal:
+    sl: 100
+    ql: 100
+  
+  # Tags for discovery
+  tags:
+    - ecommerce
+    - salla
+    - customers
+    - orders
+    - saudi-arabia
+    - mena
+  
+  # Rate limiting info
+  rateLimiting:
+    requestsPerMinute: 60
+    backoffSeconds: 120
+    
+  # Custom properties
+  custom:
+    description: |
+      Custom Python connector for Salla e-commerce platform.
+      Streams: customers, orders
+      Features:
+      - Global rate limiting (1 req/sec)
+      - 1-day date chunking for pagination limits
+      - Incremental sync via cursor fields
+      - 120-second backoff on rate limits (10 retries)
+    
+    knownLimitations:
+      - Salla API pagination limit: per_page * page <= 10,000
+      - Cloudflare rate limit: ~1.5 req/sec sustained
+      - Salla customers endpoint: 500 req/10 min

@@ -1,0 +1,200 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "customers",
+        "json_schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "Customer ID"
+            },
+            "first_name": {
+              "type": ["string", "null"],
+              "description": "Customer first name"
+            },
+            "last_name": {
+              "type": ["string", "null"],
+              "description": "Customer last name"
+            },
+            "email": {
+              "type": ["string", "null"],
+              "description": "Customer email"
+            },
+            "mobile": {
+              "type": ["string", "null"],
+              "description": "Customer mobile number"
+            },
+            "mobile_code": {
+              "type": ["string", "null"],
+              "description": "Mobile country code"
+            },
+            "city": {
+              "type": ["string", "null"],
+              "description": "Customer city"
+            },
+            "country": {
+              "type": ["string", "null"],
+              "description": "Customer country"
+            },
+            "currency": {
+              "type": ["string", "null"],
+              "description": "Preferred currency"
+            },
+            "avatar": {
+              "type": ["string", "null"],
+              "description": "Customer avatar URL"
+            },
+            "gender": {
+              "type": ["string", "null"],
+              "description": "Customer gender"
+            },
+            "groups": {
+              "type": ["array", "null"],
+              "description": "Customer groups"
+            },
+            "orders_count": {
+              "type": ["integer", "null"],
+              "description": "Total orders placed"
+            },
+            "total_spent": {
+              "type": ["number", "null"],
+              "description": "Total amount spent"
+            },
+            "created_at": {
+              "type": ["string", "null"],
+              "description": "Creation timestamp"
+            },
+            "updated_at": {
+              "type": ["string", "null"],
+              "description": "Last update timestamp"
+            }
+          },
+          "additionalProperties": true
+        },
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "default_cursor_field": ["updated_at"]
+      },
+      "sync_mode": "incremental",
+      "cursor_field": ["updated_at"],
+      "destination_sync_mode": "append_dedup",
+      "primary_key": [["id"]]
+    },
+    {
+      "stream": {
+        "name": "orders",
+        "json_schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "Order ID"
+            },
+            "reference_id": {
+              "type": ["integer", "null"],
+              "description": "Order reference number"
+            },
+            "date": {
+              "type": ["string", "object", "null"],
+              "description": "Order date"
+            },
+            "status": {
+              "type": ["object", "null"],
+              "description": "Order status details"
+            },
+            "total": {
+              "type": ["object", "null"],
+              "description": "Order total with amount and currency"
+            },
+            "sub_total": {
+              "type": ["object", "null"],
+              "description": "Order subtotal"
+            },
+            "shipping_cost": {
+              "type": ["object", "null"],
+              "description": "Shipping cost"
+            },
+            "cash_on_delivery": {
+              "type": ["object", "null"],
+              "description": "Cash on delivery fee"
+            },
+            "tax": {
+              "type": ["object", "null"],
+              "description": "Tax amount"
+            },
+            "discount": {
+              "type": ["object", "null"],
+              "description": "Discount amount"
+            },
+            "exchange_rate": {
+              "type": ["object", "null"],
+              "description": "Exchange rate information"
+            },
+            "payment_method": {
+              "type": ["string", "null"],
+              "description": "Payment method used"
+            },
+            "is_pending_payment": {
+              "type": ["boolean", "null"],
+              "description": "Whether payment is pending"
+            },
+            "pending_payment_ends_at": {
+              "type": ["integer", "null"],
+              "description": "When pending payment expires"
+            },
+            "can_cancel": {
+              "type": ["boolean", "null"],
+              "description": "Whether order can be cancelled"
+            },
+            "can_reorder": {
+              "type": ["boolean", "null"],
+              "description": "Whether order can be reordered"
+            },
+            "features": {
+              "type": ["object", "null"],
+              "description": "Order features (digitalable, shippable, etc.)"
+            },
+            "items": {
+              "type": ["array", "null"],
+              "description": "Order line items"
+            },
+            "customer": {
+              "type": ["object", "null"],
+              "description": "Customer information"
+            },
+            "shipping": {
+              "type": ["object", "null"],
+              "description": "Shipping information"
+            },
+            "urls": {
+              "type": ["object", "null"],
+              "description": "Related URLs"
+            },
+            "created_at": {
+              "type": ["string", "null"],
+              "description": "Creation timestamp"
+            },
+            "updated_at": {
+              "type": ["string", "null"],
+              "description": "Last update timestamp"
+            }
+          },
+          "additionalProperties": true
+        },
+        "supported_sync_modes": ["full_refresh", "incremental"],
+        "source_defined_cursor": true,
+        "default_cursor_field": ["date"]
+      },
+      "sync_mode": "incremental",
+      "cursor_field": ["date"],
+      "destination_sync_mode": "append_dedup",
+      "primary_key": [["id"]]
+    }
+  ]
+}

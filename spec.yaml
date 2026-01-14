@@ -1,0 +1,70 @@
+# Salla Connector Specification
+# Defines the configuration schema for the connector
+
+documentationUrl: https://docs.salla.dev/
+connectionSpecification:
+  $schema: http://json-schema.org/draft-07/schema#
+  title: Salla Source Spec
+  type: object
+  required:
+    - credentials
+  properties:
+    credentials:
+      title: Authentication
+      type: object
+      description: Choose authentication method
+      oneOf:
+        - title: OAuth 2.0
+          type: object
+          required:
+            - auth_method
+            - access_token
+          properties:
+            auth_method:
+              type: string
+              const: oauth2.0
+              order: 0
+            client_id:
+              type: string
+              title: Client ID
+              description: OAuth Client ID (optional, for token refresh)
+              order: 1
+            client_secret:
+              type: string
+              title: Client Secret
+              description: OAuth Client Secret (optional, for token refresh)
+              airbyte_secret: true
+              order: 2
+            refresh_token:
+              type: string
+              title: Refresh Token
+              description: OAuth Refresh Token (optional, for token refresh)
+              airbyte_secret: true
+              order: 3
+            access_token:
+              type: string
+              title: Access Token
+              description: OAuth Access Token for API authentication
+              airbyte_secret: true
+              order: 4
+        - title: API Key
+          type: object
+          required:
+            - auth_method
+            - api_key
+          properties:
+            auth_method:
+              type: string
+              const: api_key
+              order: 0
+            api_key:
+              type: string
+              title: API Key
+              description: Salla API Key for authentication
+              airbyte_secret: true
+              order: 1
+    merchant_id:
+      type: string
+      title: Merchant ID
+      description: Your Salla Merchant ID (for reference only)
+      order: 1
