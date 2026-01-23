@@ -69,10 +69,9 @@ class BaseSallaStream(HttpStream):
     primary_key = "id"
     page_size = 50
     _backoff_seconds = 120
-
-    @property
-    def max_retries(self) -> int:
-        return 10
+    
+    # Class attribute (not property) - ensures CDK reads it correctly
+    max_retries = 10
 
     def __init__(
         self, authenticator: TokenAuthenticator, config: Mapping[str, Any], **kwargs
