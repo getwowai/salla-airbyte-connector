@@ -68,3 +68,13 @@ connectionSpecification:
       title: Merchant ID
       description: Your Salla Merchant ID (for reference only)
       order: 1
+    start_date:
+      type: string
+      title: Start Date
+      description: "The date from which to start syncing data (format YYYY-MM-DD). Only affects incremental streams (customers, orders) on first sync."
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      examples:
+        - "2024-01-01"
+        - "2025-01-01"
+      default: "2025-01-01"
+      order: 2

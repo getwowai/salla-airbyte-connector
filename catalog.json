@@ -202,7 +202,7 @@
     },
     {
       "stream": {
-        "name": "order_shipments",
+        "name": "shipments",
         "json_schema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -215,7 +215,9 @@
             "status": {"type": ["string", "null"]},
             "shipped_at": {"type": ["string", "null"]},
             "delivered_at": {"type": ["string", "null"]},
-            "created_at": {"type": ["string", "null"]}
+            "created_at": {"type": ["string", "null"]},
+            "order": {"type": ["object", "null"]},
+            "customer": {"type": ["object", "null"]}
           },
           "additionalProperties": true
         },
@@ -264,11 +266,15 @@
           "required": ["id"],
           "properties": {
             "id": {"type": "integer"},
-            "product_id": {"type": ["integer", "null"]},
-            "variant_id": {"type": ["integer", "null"]},
+            "name": {"type": ["string", "null"]},
+            "image": {"type": ["string", "null"]},
+            "sku_id": {"type": ["integer", "null"]},
+            "sku": {"type": ["string", "null"]},
             "quantity": {"type": ["integer", "null"]},
-            "unlimited": {"type": ["boolean", "null"]},
-            "low_stock_threshold": {"type": ["integer", "null"]}
+            "sold_quantity": {"type": ["integer", "null"]},
+            "price": {"type": ["number", "string", "null"]},
+            "unlimited_quantity": {"type": ["boolean", "null"]},
+            "variant": {"type": ["string", "null"]}
           },
           "additionalProperties": true
         },

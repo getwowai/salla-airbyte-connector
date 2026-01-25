@@ -2,15 +2,15 @@
 Salla Streams
 
 Implements streams for the Salla connector:
-- CustomersStream: Customer profiles (incremental)
-- OrdersStream: Order information (incremental)
-- ProductsStream: Product catalog (full refresh)
 - StoreInfoStream: Store information (full refresh)
 - OrderStatusesStream: Order status lookup (full refresh)
-- OrderItemsStream: Order line items (parent-child)
-- OrderShipmentsStream: Order shipments (parent-child)
-- ProductVariantsStream: Product variants (parent-child)
-- ProductQuantitiesStream: Product quantities (parent-child)
+- ProductsStream: Product catalog (full refresh)
+- ShipmentsStream: All shipments (full refresh)
+- ProductQuantitiesStream: Product quantities (full refresh)
+- CustomersStream: Customer profiles (incremental)
+- OrdersStream: Order information (incremental)
+- OrderItemsStream: Order line items (parent-child of orders)
+- ProductVariantsStream: Product variants (parent-child of products)
 
 Common features:
 - Global rate limiting (1 req/sec)
@@ -180,7 +180,7 @@ class IncrementalSallaStream(BaseSallaStream):
     """
 
     chunk_days = 1
-    start_date = "2025-01-01"
+    default_start_date = "2025-01-01"
     cursor_field: str = None
 
     def __init__(
@@ -188,6 +188,8 @@ class IncrementalSallaStream(BaseSallaStream):
     ):
         super().__init__(authenticator=authenticator, config=config, **kwargs)
         self._cursor_value: Optional[str] = None
+        # Read start_date from config, fallback to default
+        self.start_date = config.get("start_date", self.default_start_date)
 
     @property
     @abstractmethod
@@ -341,17 +343,29 @@ class ParentChildSallaStream(BaseSallaStream):
         cursor_field: Optional[List[str]] = None,
         stream_state: Optional[Mapping[str, Any]] = None,
     ) -> Iterable[Optional[Mapping[str, Any]]]:
-        """Generate slices from parent stream records."""
+        """Generate slices from parent stream records.
+        
+        Properly iterates through parent stream's slices to respect
+        date filtering (start_date) for incremental parent streams.
+        """
         parent_stream = self.parent_stream_class(
             authenticator=self._authenticator, config=self.config
         )
 
-        for parent_record in parent_stream.read_records(
-            sync_mode=SyncMode.full_refresh
+        # Get parent stream's slices first (respects start_date for incremental streams)
+        for parent_slice in parent_stream.stream_slices(
+            sync_mode=SyncMode.full_refresh,
+            cursor_field=cursor_field,
+            stream_state=None,
         ):
-            parent_id = parent_record.get(self.parent_key)
-            if parent_id:
-                yield {self.partition_field: parent_id}
+            # Read records for each slice, passing the slice to apply date filters
+            for parent_record in parent_stream.read_records(
+                sync_mode=SyncMode.full_refresh,
+                stream_slice=parent_slice,
+            ):
+                parent_id = parent_record.get(self.parent_key)
+                if parent_id:
+                    yield {self.partition_field: parent_id}
 
     def request_params(
         self,
@@ -865,29 +879,20 @@ class OrderItemsStream(ParentChildSallaStream):
         }
 
 
-class OrderShipmentsStream(ParentChildSallaStream):
+class ShipmentsStream(FullRefreshSallaStream):
     """
-    Order Shipments Stream - Child of Orders.
+    Shipments Stream - All shipments (full refresh).
 
-    Endpoint: GET /orders/{order_id}/shipments
+    Endpoint: GET /shipments
+    Note: Salla API provides shipments as a flat list, not nested under orders.
     """
-
-    parent_stream_class = OrdersStream
-    parent_key = "id"
-    partition_field = "order_id"
 
     @property
     def name(self) -> str:
-        return "order_shipments"
+        return "shipments"
 
-    def path(
-        self,
-        stream_state: Optional[Mapping[str, Any]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        next_page_token: Optional[Mapping[str, Any]] = None,
-    ) -> str:
-        order_id = stream_slice.get("order_id") if stream_slice else ""
-        return f"orders/{order_id}/shipments"
+    def path(self, **kwargs) -> str:
+        return "shipments"
 
     def get_json_schema(self) -> Mapping[str, Any]:
         return {
@@ -923,6 +928,14 @@ class OrderShipmentsStream(ParentChildSallaStream):
                 "created_at": {
                     "type": ["string", "null"],
                     "description": "Creation timestamp",
+                },
+                "order": {
+                    "type": ["object", "null"],
+                    "description": "Order details",
+                },
+                "customer": {
+                    "type": ["object", "null"],
+                    "description": "Customer details",
                 },
             },
             "additionalProperties": True,
@@ -996,29 +1009,20 @@ class ProductVariantsStream(ParentChildSallaStream):
         }
 
 
-class ProductQuantitiesStream(ParentChildSallaStream):
+class ProductQuantitiesStream(FullRefreshSallaStream):
     """
-    Product Quantities Stream - Child of Products.
+    Product Quantities Stream - All product quantities (full refresh).
 
-    Endpoint: GET /products/{product_id}/quantities
+    Endpoint: GET /products/quantities
+    Note: Salla API provides product quantities as a flat list, not nested under products.
     """
-
-    parent_stream_class = ProductsStream
-    parent_key = "id"
-    partition_field = "product_id"
 
     @property
     def name(self) -> str:
         return "product_quantities"
 
-    def path(
-        self,
-        stream_state: Optional[Mapping[str, Any]] = None,
-        stream_slice: Optional[Mapping[str, Any]] = None,
-        next_page_token: Optional[Mapping[str, Any]] = None,
-    ) -> str:
-        product_id = stream_slice.get("product_id") if stream_slice else ""
-        return f"products/{product_id}/quantities"
+    def path(self, **kwargs) -> str:
+        return "products/quantities"
 
     def get_json_schema(self) -> Mapping[str, Any]:
         return {
@@ -1026,26 +1030,42 @@ class ProductQuantitiesStream(ParentChildSallaStream):
             "type": "object",
             "required": ["id"],
             "properties": {
-                "id": {"type": "integer", "description": "Quantity record ID"},
-                "product_id": {
-                    "type": ["integer", "null"],
-                    "description": "Parent product ID",
+                "id": {"type": "integer", "description": "Product ID"},
+                "name": {
+                    "type": ["string", "null"],
+                    "description": "Product name",
                 },
-                "variant_id": {
+                "image": {
+                    "type": ["string", "null"],
+                    "description": "Product image URL",
+                },
+                "sku_id": {
                     "type": ["integer", "null"],
-                    "description": "Variant ID if applicable",
+                    "description": "SKU ID for variants",
+                },
+                "sku": {
+                    "type": ["string", "null"],
+                    "description": "Product SKU",
                 },
                 "quantity": {
                     "type": ["integer", "null"],
                     "description": "Available quantity",
                 },
-                "unlimited": {
+                "sold_quantity": {
+                    "type": ["integer", "null"],
+                    "description": "Total sold quantity",
+                },
+                "price": {
+                    "type": ["number", "string", "null"],
+                    "description": "Product price",
+                },
+                "unlimited_quantity": {
                     "type": ["boolean", "null"],
                     "description": "Is quantity unlimited",
                 },
-                "low_stock_threshold": {
-                    "type": ["integer", "null"],
-                    "description": "Low stock alert threshold",
+                "variant": {
+                    "type": ["string", "null"],
+                    "description": "Variant name if applicable",
                 },
             },
             "additionalProperties": True,
