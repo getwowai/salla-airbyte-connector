@@ -343,17 +343,29 @@ class ParentChildSallaStream(BaseSallaStream):
         cursor_field: Optional[List[str]] = None,
         stream_state: Optional[Mapping[str, Any]] = None,
     ) -> Iterable[Optional[Mapping[str, Any]]]:
-        """Generate slices from parent stream records."""
+        """Generate slices from parent stream records.
+        
+        Properly iterates through parent stream's slices to respect
+        date filtering (start_date) for incremental parent streams.
+        """
         parent_stream = self.parent_stream_class(
             authenticator=self._authenticator, config=self.config
         )
 
-        for parent_record in parent_stream.read_records(
-            sync_mode=SyncMode.full_refresh
+        # Get parent stream's slices first (respects start_date for incremental streams)
+        for parent_slice in parent_stream.stream_slices(
+            sync_mode=SyncMode.full_refresh,
+            cursor_field=cursor_field,
+            stream_state=None,
         ):
-            parent_id = parent_record.get(self.parent_key)
-            if parent_id:
-                yield {self.partition_field: parent_id}
+            # Read records for each slice, passing the slice to apply date filters
+            for parent_record in parent_stream.read_records(
+                sync_mode=SyncMode.full_refresh,
+                stream_slice=parent_slice,
+            ):
+                parent_id = parent_record.get(self.parent_key)
+                if parent_id:
+                    yield {self.partition_field: parent_id}
 
     def request_params(
         self,
