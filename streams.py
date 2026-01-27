@@ -818,6 +818,7 @@ class OrderItemsStream(ParentChildSallaStream):
     parent_stream_class = OrdersStream
     parent_key = "id"
     partition_field = "order_id"
+    primary_key = ["id", "order_id"]  # Composite key to avoid BigQuery JSON ordering issues
 
     @property
     def name(self) -> str:

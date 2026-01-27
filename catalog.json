@@ -198,7 +198,7 @@
       },
       "sync_mode": "full_refresh",
       "destination_sync_mode": "overwrite",
-      "primary_key": [["id"]]
+      "primary_key": [["id", "order_id"]]
     },
     {
       "stream": {
