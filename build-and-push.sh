@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Build and push Salla Airbyte Connector Docker image
-# Usage: ./build-and-push.sh [version]
+# Usage: ./build-and-push.sh [version] [tag_message]
 # Example: ./build-and-push.sh 0.2.7
+# Example: ./build-and-push.sh 0.2.8 "Fix orders cursor field to use updated_at"
 
 set -e  # Exit on error
 
@@ -15,6 +16,7 @@ PLATFORM="linux/amd64"
 
 # Get version from argument or use default
 VERSION=${1:-"0.2.7"}
+TAG_MESSAGE=${2:-""}
 
 # Full image tag
 IMAGE_TAG="${REGISTRY}/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${VERSION}"
@@ -53,6 +55,38 @@ docker buildx build \
 if [ $? -eq 0 ]; then
     echo ""
     echo "✅ Successfully built and pushed ${IMAGE_TAG}"
+    
+    # Create and push git tag
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        echo ""
+        echo "🏷️  Creating git tag..."
+        
+        # Check if tag already exists
+        if git rev-parse "${VERSION}" >/dev/null 2>&1; then
+            echo "⚠️  Tag ${VERSION} already exists. Skipping tag creation."
+        else
+            # Create annotated tag if message provided, otherwise lightweight tag
+            if [ -n "$TAG_MESSAGE" ]; then
+                git tag -a "${VERSION}" -m "${TAG_MESSAGE}"
+                echo "✅ Created annotated tag: ${VERSION}"
+            else
+                git tag "${VERSION}"
+                echo "✅ Created lightweight tag: ${VERSION}"
+            fi
+            
+            # Push tag to remote
+            if git remote | grep -q "^origin$"; then
+                git push origin "${VERSION}"
+                echo "✅ Pushed tag ${VERSION} to origin"
+            else
+                echo "⚠️  No 'origin' remote found. Tag created locally but not pushed."
+            fi
+        fi
+    else
+        echo ""
+        echo "⚠️  Not in a git repository. Skipping tag creation."
+    fi
+    
     echo ""
     echo "Next steps:"
     echo "1. Update your Airbyte connector to use image tag: ${VERSION}"
